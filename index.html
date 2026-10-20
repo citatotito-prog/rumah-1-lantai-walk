@@ -13,7 +13,11 @@
   body{background:var(--paper);color:var(--ink);font-family:"Space Grotesk",system-ui,sans-serif;overflow-x:hidden}
   #stage{position:fixed;inset:0;z-index:0}
   #scene{width:100%;height:100%;display:block}
-  #scroll{height:1500vh;position:relative;z-index:1;pointer-events:none}
+  #scroll{height:1700vh;position:relative;z-index:1;pointer-events:none}
+  #compare{position:fixed;right:3.5vw;top:50%;transform:translateY(-50%);width:min(45vw,660px);z-index:4;opacity:0;pointer-events:none;background:#fffdf6;border:1px solid rgba(33,29,22,.35);padding:10px 10px 8px;box-shadow:0 24px 60px rgba(33,29,22,.28)}
+  #compare img{width:100%;display:block}
+  #compare figcaption{margin-top:8px;font-size:10px;letter-spacing:.22em;color:var(--ink-soft);display:flex;justify-content:space-between}
+  #compare figcaption b{color:var(--ink)}
   .ui{position:fixed;z-index:5;pointer-events:none}
   #brand{top:22px;left:26px;font-size:13px;letter-spacing:.22em;font-weight:600}
   #brand small{display:block;letter-spacing:.14em;font-weight:400;color:var(--ink-soft);margin-top:4px;font-size:11px}
@@ -41,7 +45,7 @@
   #fallback{position:fixed;inset:0;background:var(--paper);z-index:15;display:none;overflow:auto;padding:24px;text-align:center}
   #fallback img{max-width:min(980px,94vw);border:1px solid rgba(33,29,22,.25)}
   #fallback p{margin:14px auto;max-width:560px;font-size:14px;line-height:1.7;color:var(--ink-soft)}
-  @media (max-width:640px){ .caption{bottom:84px} #brand{left:16px;top:14px} #counter{right:16px;top:14px} #sheetTag{display:none} }
+  @media (max-width:640px){ .caption{bottom:84px} #brand{left:16px;top:14px} #counter{right:16px;top:14px} #sheetTag{display:none} #compare{width:88vw;right:6vw} }
 </style>
 </head>
 <body>
@@ -66,7 +70,10 @@
 <div class="caption" id="cap7"><h2>Kamar Tidur <em>3</em></h2><p>Menghadap timur — cahaya pagi, plus pintu belakang ke area cuci &amp; jemur.</p></div>
 <div class="caption" id="cap8"><h2>Kamar Tidur <em>Utama</em></h2><p>Dengan kamar mandi dalam: shower, kloset, wastafel.</p></div>
 <div class="caption" id="cap9"><h2>Ruang <em>Tamu</em></h2><p>Ruangan pertama yang menyambut — sofa dan TV.</p></div>
-<div class="caption" id="cap10"><h2>Selesai — <em>seluruh rumah.</em></h2><p>Tujuh ruangan, satu kali jalan. Karya berjalan · GLABS PROJECT · paling nyaman dibuka di laptop.</p></div>
+<div class="caption" id="cap10"><h2>Selesai — <em>seluruh rumah.</em></h2><p>Tujuh ruangan, satu kali jalan.</p></div>
+<div class="caption" id="cap11"><h2>Kembali ke <em>denah.</em></h2><p>Kiri: model 3D-nya dari atas. Kanan: lembar gambar 2D-nya. Satu gambar, dua wujud · GLABS PROJECT.</p></div>
+
+<figure id="compare"><img src="denah.png" alt="Denah 2D rumah 1 lantai 10×15"/><figcaption><span><b>LEMBAR A-101</b> · DENAH LANTAI 2D</span><span>SKALA 1:50</span></figcaption></figure>
 
 <div id="scrollHint"><div class="wheel"></div>SCROLL UNTUK MASUK</div>
 
@@ -541,8 +548,10 @@ var KEYS = [ // p, camera position, target, fov  (wide fov + pulled-back stops s
   {p:0.830, pos:[-0.3,1.68,0.35],tgt:[-2.5,0.9,-1.7], fov:74},
   {p:0.860, pos:[-0.1,1.62,-0.15],tgt:[0.4,1.15,3.2],  fov:70},
   {p:0.890, pos:[0.45,1.62,3.35],tgt:[-3.0,1.0,2.65],  fov:72},
-  {p:0.950, pos:[-0.35,1.65,3.3],tgt:[-3.4,0.95,2.55], fov:74},
-  {p:1.000, pos:[-0.3,1.62,3.25],tgt:[-3.4,0.95,2.55], fov:74}
+  {p:0.925, pos:[-0.35,1.65,3.3],tgt:[-3.4,0.95,2.55], fov:74},
+  {p:0.945, pos:[-0.3,1.62,3.25],tgt:[-3.4,0.95,2.55], fov:74},
+  {p:0.972, pos:[0.45,7.5,6.2],  tgt:[-0.6,0,0.6],     fov:38},
+  {p:1.000, pos:[0,52,0.6],      tgt:[0,0,0],          fov:9}
 ];
 function applyKeys(p){
   var i = 0;
@@ -555,7 +564,9 @@ function applyKeys(p){
   if (Math.abs(camera.fov-f) > 0.01){ camera.fov = f; camera.updateProjectionMatrix(); }
 }
 var caps = [];
-for (var ci=0; ci<=10; ci++) caps.push(document.getElementById('cap'+ci));
+for (var ci=0; ci<=11; ci++) caps.push(document.getElementById('cap'+ci));
+var stageEl = document.getElementById('stage');
+var compareEl = document.getElementById('compare');
 function capOpacity(p, a, b, c, d){ return smooth(seg(p,a,b)) * (1 - smooth(seg(p,c,d))); }
 var roomNow = document.getElementById('roomNow'), roomName = document.getElementById('roomName');
 var sheetTag = document.getElementById('sheetTag'), hint = document.getElementById('scrollHint');
@@ -564,10 +575,11 @@ var tmpV = new THREE.Vector3();
 var ROOM_STOPS = [
   [0.270, '01', 'RUANG KELUARGA'], [0.400, '02', 'DAPUR'], [0.520, '03', 'K. TIDUR 2'],
   [0.595, '04', 'K. MANDI'], [0.650, '05', 'K. TIDUR 3'], [0.755, '06', 'K. TIDUR UTAMA'],
-  [0.870, '07', 'R. TAMU']
+  [0.870, '07', 'R. TAMU'], [0.955, '00', 'DENAH · PENUTUP']
 ];
 function applyProgress(p){
-  clipPlane.constant = lerp(1.2, 3.06, smooth(seg(p, 0.01, 0.13)));
+  var riseF = smooth(seg(p, 0.01, 0.13)) * (1 - smooth(seg(p, 0.945, 0.972)));
+  clipPlane.constant = lerp(1.2, 3.06, riseF);
   applyKeys(p);
   doorPivot.rotation.y = lerp(0, 1.66, smooth(seg(p, 0.25, 0.30)));
   Object.keys(ROOMS).forEach(function(k){
@@ -575,7 +587,7 @@ function applyProgress(p){
     r.plane.constant = lerp(r.from, r.to, smooth(seg(p, r.t0, r.t1)));
   });
   sun.intensity = lerp(1.15, 1.6, seg(p, 0.15, 0.4));
-  var lo = 1 - seg(p, 0.145, 0.185);
+  var lo = clamp01(1 - seg(p, 0.145, 0.185) + seg(p, 0.95, 0.978));
   labelsEl.style.opacity = lo;
   dimGroup.children.forEach(function(l){ l.material.opacity = 0.75*lo; });
   sheetTag.style.opacity = Math.max(lo, 0);
@@ -596,8 +608,14 @@ function applyProgress(p){
   caps[6].style.opacity = capOpacity(p, 0.595, 0.615, 0.64, 0.655);
   caps[7].style.opacity = capOpacity(p, 0.65, 0.675, 0.72, 0.74);
   caps[8].style.opacity = capOpacity(p, 0.755, 0.78, 0.845, 0.865);
-  caps[9].style.opacity = capOpacity(p, 0.87, 0.895, 0.935, 0.95);
-  caps[10].style.opacity = smooth(seg(p, 0.945, 0.975));
+  caps[9].style.opacity = capOpacity(p, 0.87, 0.895, 0.912, 0.928);
+  caps[10].style.opacity = capOpacity(p, 0.928, 0.94, 0.958, 0.97);
+  caps[11].style.opacity = smooth(seg(p, 0.97, 0.988));
+  var fin = smooth(seg(p, 0.962, 0.99));
+  var tf = 'translateX(' + (-23*fin).toFixed(2) + 'vw) scale(' + (1 - 0.44*fin).toFixed(3) + ')';
+  stageEl.style.transform = tf;
+  labelsEl.style.transform = tf;
+  compareEl.style.opacity = smooth(seg(p, 0.97, 0.992));
   hint.style.opacity = 1 - seg(p, 0.02, 0.045);
   progressBar.style.width = (p*100).toFixed(1)+'%';
   var rn = '00', rname = 'DENAH LANTAI';
