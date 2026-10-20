@@ -133,69 +133,91 @@ var inkFurn = new THREE.MeshBasicMaterial({color:0xfffdf4});
 var inkPaper= new THREE.MeshBasicMaterial({color:0xe9e0c9});
 var glassInk= new THREE.MeshStandardMaterial({color:0xaecdd6, transparent:true, opacity:0.35, roughness:0.1, metalness:0.1});
 
-function woodTexture(){
-  var c = document.createElement('canvas'); c.width = c.height = 256;
-  var g = c.getContext('2d');
-  g.fillStyle = '#b0824f'; g.fillRect(0,0,256,256);
-  for (var r=0;r<4;r++){
-    var y=r*64;
-    g.fillStyle='rgba('+(140+Math.random()*30|0)+','+(95+Math.random()*20|0)+',50,0.25)';
-    g.fillRect(0,y,256,64);
-    g.fillStyle='rgba(70,45,20,0.55)'; g.fillRect(0,y,256,2);
-    for (var i=0;i<7;i++){
-      g.strokeStyle='rgba(90,58,26,'+(0.05+Math.random()*0.09)+')';
-      g.beginPath(); var gy=y+6+Math.random()*52; g.moveTo(0,gy);
-      g.bezierCurveTo(80,gy+3,170,gy-3,256,gy+2); g.stroke();
-    }
-    g.fillStyle='rgba(70,45,20,0.4)'; g.fillRect(Math.random()*256, y, 2, 64);
+/* ============ photo textures (Poly Haven, CC0) + environment ============ */
+var texMgr = new THREE.LoadingManager();
+var texLoader = new THREE.TextureLoader(texMgr);
+var texReady = false, frameReady = false;
+function maybeHideLoader(){
+  if (texReady && frameReady && loader.style.display !== 'none'){
+    loader.style.opacity = '0';
+    setTimeout(function(){ loader.style.display = 'none'; }, 750);
   }
-  var t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
-  t.repeat.set(4,5);
+}
+texMgr.onLoad = function(){ texReady = true; maybeHideLoader(); };
+texMgr.onError = function(){ texReady = true; maybeHideLoader(); };
+setTimeout(function(){ texReady = true; maybeHideLoader(); }, 9000);
+function T(file, srgb, rx, ry){
+  var t = texLoader.load('tex/' + file);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(rx || 1, ry || 1);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
   return t;
 }
-function tileTexture(){
-  var c = document.createElement('canvas'); c.width = c.height = 256;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+(function(){
+  var c = document.createElement('canvas'); c.width = 512; c.height = 256;
   var g = c.getContext('2d');
-  g.fillStyle = '#b9b0a0'; g.fillRect(0,0,256,256);
-  for (var r=0;r<2;r++) for (var q=0;q<2;q++){
-    var l = 196 + ((r+q)%2)*14 + Math.random()*8;
-    g.fillStyle = 'rgb('+(l|0)+','+((l-8)|0)+','+((l-26)|0)+')';
-    g.fillRect(q*128+3, r*128+3, 122, 122);
-    for (var i=0;i<26;i++){
-      g.fillStyle='rgba(120,110,95,'+(0.04+Math.random()*0.06)+')';
-      g.fillRect(q*128+Math.random()*122, r*128+Math.random()*122, 2, 2);
-    }
-  }
-  var t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
-  t.repeat.set(3,3);
+  var grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, '#fff3da'); grad.addColorStop(0.45, '#e9dfc9');
+  grad.addColorStop(0.62, '#cbbc9e'); grad.addColorStop(1, '#7d7261');
+  g.fillStyle = grad; g.fillRect(0, 0, 512, 256);
+  g.fillStyle = 'rgba(255,236,190,0.9)';
+  g.beginPath(); g.arc(360, 62, 26, 0, 7); g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.20)'; g.fillRect(40, 96, 150, 34); g.fillRect(300, 104, 170, 30);
+  var et = new THREE.CanvasTexture(c);
+  et.mapping = THREE.EquirectangularReflectionMapping;
+  et.colorSpace = THREE.SRGBColorSpace;
+  var pm = new THREE.PMREMGenerator(renderer);
+  scene.environment = pm.fromEquirectangular(et).texture;
+})();
+function artTexture(){
+  var c = document.createElement('canvas'); c.width = 256; c.height = 192;
+  var g = c.getContext('2d');
+  g.fillStyle = '#e7dcc4'; g.fillRect(0, 0, 256, 192);
+  g.fillStyle = '#b4552d'; g.fillRect(24, 96, 120, 72);
+  g.fillStyle = '#46685a'; g.fillRect(120, 30, 112, 90);
+  g.fillStyle = '#d9a441'; g.beginPath(); g.arc(74, 62, 30, 0, 7); g.fill();
+  g.fillStyle = '#33302a'; g.fillRect(24, 160, 208, 5);
+  var t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
 function std(color, rough, extra){
-  return new THREE.MeshStandardMaterial(Object.assign({color:color, roughness:rough==null?0.9:rough, metalness:0.0}, extra||{}));
+  var o = {color:color, roughness:rough==null?0.9:rough, metalness:0.0, envMapIntensity:0.5};
+  if (extra) for (var k in extra) o[k] = extra[k];
+  return new THREE.MeshStandardMaterial(o);
 }
+function fabricTex(){ return {roughnessMap:T('fabric_rough.jpg'), bumpMap:T('fabric_rough.jpg'), bumpScale:0.12, envMapIntensity:0.3}; }
 var MATS = {
-  wall:    std(0xece1cc, 0.95),
-  floorWood: new THREE.MeshStandardMaterial({map:woodTexture(), roughness:0.8}),
-  floorTile: new THREE.MeshStandardMaterial({map:tileTexture(), roughness:0.55}),
-  stone:   std(0xcfc8bb, 0.5),
-  sofa:    std(0x46685a, 1.0), cushion: std(0xd9a441, 1.0),
-  walnut:  std(0x6e4a2f, 0.7), wood2: std(0x8a5a33, 0.75),
-  dark:    std(0x17181c, 0.35, {metalness:0.2}),
-  fridge:  std(0xd8dde2, 0.4, {metalness:0.45}),
-  white:   std(0xf4f1ea, 0.55),
-  bedU:    std(0xb4552d, 1.0), bedU2: std(0x8a3e20, 1.0),
-  bedK2:   std(0x4a6b8a, 1.0), bedK3: std(0xc9962e, 1.0),
-  pillow:  std(0xf1ead9, 1.0),
-  curtain: std(0xa85638, 1.0),
-  rug:     std(0x8a4a3a, 1.0), rugB: std(0x6e382a, 1.0),
-  cabinet: std(0x5d6d5a, 0.8), cabinetUp: std(0xe8e2d2, 0.85),
-  tileWall: std(0x9db4a8, 0.5),
+  wall:    std(0xffffff, 1.0, {map:T('plaster_diff.jpg',1), roughnessMap:T('plaster_rough.jpg'), bumpMap:T('plaster_rough.jpg'), bumpScale:0.25, envMapIntensity:0.35}),
+  floorWood: std(0xffffff, 1.0, {map:T('woodfloor_diff.jpg',1,2,3), roughnessMap:T('woodfloor_rough.jpg',0,2,3), normalMap:T('woodfloor_nor.jpg',0,2,3), envMapIntensity:0.55}),
+  floorTile: std(0xffffff, 1.0, {map:T('tiles_diff.jpg',1,2,2), roughnessMap:T('tiles_rough.jpg',0,2,2), normalMap:T('tiles_nor.jpg',0,2,2), envMapIntensity:0.55}),
+  stone:   std(0xffffff, 1.0, {map:T('marble_diff.jpg',1), roughnessMap:T('marble_rough.jpg'), envMapIntensity:0.65}),
+  tileWall: std(0xffffff, 1.0, {map:T('marble_diff.jpg',1,2,1), roughnessMap:T('marble_rough.jpg',0,2,1), envMapIntensity:0.65}),
+  sofa:    std(0x46685a, 1.0, fabricTex()),
+  cushion: std(0xd9a441, 1.0, fabricTex()),
+  walnut:  std(0xffffff, 1.0, {map:T('darkwood_diff.jpg',1), roughnessMap:T('darkwood_rough.jpg'), envMapIntensity:0.45}),
+  wood2:   std(0xd8b285, 1.0, {map:T('darkwood_diff.jpg',1), roughnessMap:T('darkwood_rough.jpg'), envMapIntensity:0.45}),
+  dark:    std(0x17181c, 0.3, {metalness:0.15, envMapIntensity:1.2}),
+  fridge:  std(0xd8dde2, 0.35, {metalness:0.6, envMapIntensity:1.0}),
+  white:   std(0xf4f1ea, 0.2, {envMapIntensity:0.8}),
+  bedU:    std(0xb4552d, 1.0, fabricTex()),
+  bedU2:   std(0x8a3e20, 1.0, fabricTex()),
+  bedK2:   std(0x4a6b8a, 1.0, fabricTex()),
+  bedK3:   std(0xc9962e, 1.0, fabricTex()),
+  pillow:  std(0xf1ead9, 1.0, fabricTex()),
+  curtain: std(0xa85638, 1.0, fabricTex()),
+  rug:     std(0x8a4a3a, 1.0, fabricTex()),
+  rugB:    std(0x6e382a, 1.0, fabricTex()),
+  cabinet: std(0x5d6d5a, 0.55, {envMapIntensity:0.45}),
+  cabinetUp: std(0xe8e2d2, 0.6, {envMapIntensity:0.45}),
   plant:   std(0x4a7a3f, 1.0),
-  lamp:    std(0x232428, 0.5, {metalness:0.3}),
+  lamp:    std(0x232428, 0.5, {metalness:0.3, envMapIntensity:0.8}),
   bulb:    std(0xffca7a, 0.4, {emissive:0xffb85e, emissiveIntensity:1.6}),
-  terra:   std(0xd8cfb8, 0.9)
+  terra:   std(0xc9a184, 0.95),
+  mirror:  std(0xdfe9ec, 0.06, {metalness:1.0, envMapIntensity:1.5}),
+  art:     std(0xffffff, 0.85, {map:artTexture(), envMapIntensity:0.3})
 };
 
 /* ============ per-room sweep planes ============ */
@@ -347,6 +369,33 @@ box(8300, 350, 300, 300, 2900, inkWall, {base:0});
 box(1550, 14300, 1500, 900, 150, inkFurn, {base:0});
 
 /* ============ furniture per room (tagged for the sweep) ============ */
+/* ============ detail helpers (checkpoint 3) ============ */
+function pillow(cx, cy, room){
+  var m = new THREE.Mesh(new THREE.SphereGeometry(0.27, 18, 14), inkFurn);
+  m.scale.set(1.05, 0.42, 0.72);
+  m.position.set(PX(cx), FB/1000 + 0.66, PZ(cy));
+  m.castShadow = true;
+  m.userData.room = room; m.userData.mat = 'pillow'; sweepMeshes.push(m); scene.add(m);
+}
+function sofaCushions(cx, cy, dirX, room){
+  [-520, 520].forEach(function(dy){
+    var m = furn(cx, cy + dy, 280, 950, 560, {base:FB+320, room:room, mat:'sofa'});
+    m.rotation.z = -0.12 * dirX;
+  });
+  var p = furn(cx - dirX*200, cy - 720, 150, 360, 360, {base:FB+400, room:room, mat:'cushion'});
+  p.rotation.set(0.15, 0.3, 0.2 * dirX);
+}
+function wardrobeDoors(fx, cy, len, h, hx, room){
+  box(fx, cy - len/4, 30, len/2 - 30, h, inkFurn, {base:FB+60, room:room, mat:'walnut'});
+  box(fx, cy + len/4, 30, len/2 - 30, h, inkFurn, {base:FB+60, room:room, mat:'walnut'});
+  cyl(hx, cy - 45, 12, 240, inkFurn, {base:FB+850, room:room, mat:'dark'});
+  cyl(hx, cy + 45, 12, 240, inkFurn, {base:FB+850, room:room, mat:'dark'});
+}
+function handleBar(cx, cy, alongY, room){
+  var hnd = cyl(cx, cy, 12, 260, inkFurn, {base:FB+690, room:room, mat:'fridge'});
+  if (alongY) hnd.rotation.x = Math.PI/2; else hnd.rotation.z = Math.PI/2;
+  hnd.position.y = (FB+760)/1000;
+}
 /* --- R. Tamu --- */
 furn(1100, 6350, 900, 2100, 380, {room:'tamu', mat:'sofa'});
 furn(750, 6350, 200, 2100, 850, {room:'tamu', mat:'sofa'});
@@ -354,6 +403,7 @@ furn(1100, 5450, 900, 200, 620, {room:'tamu', mat:'sofa'});
 furn(1100, 7250, 900, 200, 620, {room:'tamu', mat:'sofa'});
 furn(1150, 5900, 620, 560, 130, {base:FB+380, room:'tamu', mat:'cushion'});
 furn(1150, 6800, 620, 560, 130, {base:FB+380, room:'tamu', mat:'cushion'});
+sofaCushions(880, 6350, -1, 'tamu');
 furn(2450, 6550, 600, 1000, 400, {room:'tamu', mat:'walnut'});
 furn(2400, 4950, 800, 800, 420, {room:'tamu', mat:'sofa'});
 furn(2080, 4950, 160, 800, 760, {room:'tamu', mat:'sofa'});
@@ -370,6 +420,7 @@ furn(7975, 7550, 900, 200, 620, {room:'keluarga', mat:'sofa'});
 furn(7900, 6100, 700, 480, 120, {base:FB+380, room:'keluarga', mat:'cushion'});
 furn(7900, 6650, 700, 480, 120, {base:FB+380, room:'keluarga', mat:'cushion'});
 furn(7900, 7200, 700, 480, 120, {base:FB+380, room:'keluarga', mat:'cushion'});
+sofaCushions(8100, 6650, 1, 'keluarga');
 furn(5850, 6800, 400, 1800, 480, {room:'keluarga', mat:'walnut'});
 box(5890, 6800, 70, 1650, 1000, inkFurn, {base:650, room:'keluarga', mat:'dark'});
 furn(6900, 6700, 600, 1000, 400, {room:'keluarga', mat:'walnut'});
@@ -378,8 +429,14 @@ furn(6850, 6775, 1600, 950, 70, {base:FB+680, room:'keluarga', mat:'wood2'});   
 [[6200,6450],[7500,6450],[6200,7100],[7500,7100]].forEach(function(p){
   box(p[0], p[1], 60, 60, 680, inkFurn, {base:FB, room:'keluarga', mat:'wood2'}); });
 function chair(cx, cy, backNorth, room){
-  furn(cx, cy, 450, 450, 60, {base:FB+420, room:room, mat:'wood2'});
-  furn(cx, cy + (backNorth?200:-200), 450, 60, 520, {base:FB+420, room:room, mat:'wood2'});
+  var sgn = backNorth ? 1 : -1;
+  furn(cx, cy, 450, 450, 50, {base:FB+400, room:room, mat:'wood2'});
+  [[-180,-180],[180,-180],[-180,180],[180,180]].forEach(function(o){
+    furn(cx+o[0], cy+o[1], 45, 45, 400, {base:FB, room:room, mat:'wood2'});
+  });
+  furn(cx-180, cy+sgn*200, 45, 45, 480, {base:FB+450, room:room, mat:'wood2'});
+  furn(cx+180, cy+sgn*200, 45, 45, 480, {base:FB+450, room:room, mat:'wood2'});
+  furn(cx, cy+sgn*200, 405, 45, 130, {base:FB+800, room:room, mat:'wood2'});
 }
 chair(6375, 7560, true, 'keluarga'); chair(7175, 7560, true, 'keluarga');
 chair(6375, 5990, false, 'keluarga'); chair(7175, 5990, false, 'keluarga');
@@ -393,9 +450,10 @@ furn(2950, 9900, 1400, 2000, 320, {room:'utama', mat:'walnut'});
 furn(2950, 9850, 1320, 1880, 170, {base:FB+320, room:'utama', mat:'white'});
 furn(2950, 9450, 1360, 1050, 110, {base:FB+490, room:'utama', mat:'bedU'});         // blanket
 furn(2950, 9050, 1400, 130, 880, {base:FB, room:'utama', mat:'walnut'});           // headboard
-furn(2620, 9380, 560, 380, 120, {base:FB+490, room:'utama', mat:'pillow'});
-furn(3280, 9380, 560, 380, 120, {base:FB+490, room:'utama', mat:'pillow'});
+pillow(2620, 9380, 'utama');
+pillow(3280, 9380, 'utama');
 furn(3960, 10300, 525, 1500, 2100, {base:FB, room:'utama', mat:'wood2'});          // wardrobe
+wardrobeDoors(3685, 10300, 1500, 1900, 3640, 'utama');
 furn(1200, 8450, 1200, 600, 60, {base:FB+680, room:'utama', mat:'wood2'});        // desk
 furn(820, 8450, 420, 560, 680, {base:FB, room:'utama', mat:'wood2'});
 furn(1190, 9035, 450, 450, 60, {base:FB+420, room:'utama', mat:'wood2'});
@@ -418,14 +476,30 @@ furn(8125, 8525, 560, 700, 780, {base:2100, room:'dapur', mat:'cabinetUp'});    
 furn(7150, 10625, 2000, 560, 780, {base:2100, room:'dapur', mat:'cabinetUp'});     // upper cabinets N
 box(8450, 9400, 60, 2600, 1500, inkFurn, {base:FB+880, room:'dapur', mat:'tileWall'}); // backsplash E
 furn(6325, 8525, 800, 750, 1900, {base:FB, room:'dapur', mat:'fridge'});
+/* kitchen fronts, oven, handles, faucet (checkpoint 3) */
+box(7800, 8525, 30, 700, 700, inkFurn, {base:FB+80, room:'dapur', mat:'cabinet'});
+box(7795, 8525, 25, 640, 520, inkFurn, {base:FB+120, room:'dapur', mat:'dark'});
+var ovenH = cyl(7765, 8525, 14, 560, inkFurn, {base:FB+690, room:'dapur', mat:'fridge'});
+ovenH.rotation.x = Math.PI/2; ovenH.position.y = (FB+790)/1000;
+box(7800, 10030, 30, 440, 700, inkFurn, {base:FB+80, room:'dapur', mat:'cabinet'});
+box(7800, 10520, 30, 440, 700, inkFurn, {base:FB+80, room:'dapur', mat:'cabinet'});
+box(6300, 10305, 700, 30, 700, inkFurn, {base:FB+80, room:'dapur', mat:'cabinet'});
+box(7150, 10305, 700, 30, 700, inkFurn, {base:FB+80, room:'dapur', mat:'cabinet'});
+box(8000, 10305, 700, 30, 700, inkFurn, {base:FB+80, room:'dapur', mat:'cabinet'});
+handleBar(7770, 10030, true, 'dapur'); handleBar(7770, 10520, true, 'dapur');
+handleBar(6300, 10272, false, 'dapur'); handleBar(7150, 10272, false, 'dapur'); handleBar(8000, 10272, false, 'dapur');
+cyl(6550, 10780, 22, 330, inkFurn, {base:FB+920, room:'dapur', mat:'fridge'});
+var spout = cyl(6550, 10690, 15, 260, inkFurn, {base:FB+920, room:'dapur', mat:'fridge'});
+spout.rotation.x = Math.PI/2; spout.position.y = (FB+1230)/1000;
 /* --- K. Tidur 2 --- */
 furn(1400, 12400, 1500, 2000, 320, {room:'k2', mat:'walnut'});
 furn(1400, 12450, 1420, 1880, 170, {base:FB+320, room:'k2', mat:'white'});
 furn(1400, 12100, 1460, 1100, 110, {base:FB+490, room:'k2', mat:'bedK2'});          // blanket
 furn(1400, 13340, 1500, 120, 700, {base:FB, room:'k2', mat:'walnut'});
-furn(1075, 13050, 560, 380, 120, {base:FB+490, room:'k2', mat:'pillow'});
-furn(1725, 13050, 560, 380, 120, {base:FB+490, room:'k2', mat:'pillow'});
+pillow(1075, 13050, 'k2');
+pillow(1725, 13050, 'k2');
 furn(3125, 12750, 600, 1200, 2000, {base:FB, room:'k2', mat:'wood2'});
+wardrobeDoors(2810, 12750, 1200, 1800, 2775, 'k2');
 furn(2450, 13150, 400, 400, 450, {base:FB, room:'k2', mat:'wood2'});
 /* --- KM utama --- */
 box(4025, 12975, 850, 850, 60, inkFurn, {base:FB, room:'km', mat:'white'});
@@ -450,11 +524,35 @@ furn(7650, 12400, 1500, 2000, 320, {room:'k3', mat:'walnut'});
 furn(7650, 12450, 1420, 1880, 170, {base:FB+320, room:'k3', mat:'white'});
 furn(7650, 12100, 1460, 1100, 110, {base:FB+490, room:'k3', mat:'bedK3'});
 furn(7650, 13340, 1500, 120, 700, {base:FB, room:'k3', mat:'walnut'});
-furn(7325, 13050, 560, 380, 120, {base:FB+490, room:'k3', mat:'pillow'});
-furn(7975, 13050, 560, 380, 120, {base:FB+490, room:'k3', mat:'pillow'});
+pillow(7325, 13050, 'k3');
+pillow(7975, 13050, 'k3');
 furn(5750, 11800, 600, 1200, 2000, {base:FB, room:'k3', mat:'wood2'});
+wardrobeDoors(6065, 11800, 1200, 1800, 6100, 'k3');
 furn(6650, 13150, 400, 400, 450, {base:FB, room:'k3', mat:'wood2'});
 box(8380, 12400, 90, 1100, 2350, inkFurn, {base:FB, room:'k3', mat:'curtain'});     // curtain E window
+/* ============ decor (checkpoint 3) ============ */
+box(8402, 6650, 36, 1400, 900, inkFurn, {base:1500, room:'keluarga', mat:'walnut'});
+box(8395, 6650, 20, 1280, 780, inkFurn, {base:1560, room:'keluarga', mat:'art'});
+box(598, 6350, 36, 1400, 900, inkFurn, {base:1500, room:'tamu', mat:'walnut'});
+box(605, 6350, 20, 1280, 780, inkFurn, {base:1560, room:'tamu', mat:'art'});
+box(598, 9900, 36, 1500, 800, inkFurn, {base:1600, room:'utama', mat:'walnut'});
+box(605, 9900, 20, 1380, 680, inkFurn, {base:1660, room:'utama', mat:'art'});
+box(5780, 6500, 200, 45, 300, inkFurn, {base:FB+480, room:'keluarga', mat:'bedU'});
+box(5780, 6560, 200, 45, 270, inkFurn, {base:FB+480, room:'keluarga', mat:'bedK2'});
+box(5780, 6620, 200, 45, 320, inkFurn, {base:FB+480, room:'keluarga', mat:'cushion'});
+box(6880, 6720, 300, 220, 45, inkFurn, {base:FB+400, room:'keluarga', mat:'bedK3'});
+cyl(6850, 6400, 55, 210, inkFurn, {base:FB+750, room:'keluarga', mat:'terra'});
+(function(){ var vs = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), inkFurn);
+  vs.position.set(PX(6850), (FB+1020)/1000, PZ(6400)); vs.userData.room='keluarga'; vs.userData.mat='plant';
+  sweepMeshes.push(vs); scene.add(vs); })();
+cyl(7600, 10625, 150, 55, inkFurn, {base:FB+920, room:'dapur', mat:'dark'});
+[[7540,10580],[7660,10600],[7600,10680]].forEach(function(p){
+  var fs2 = new THREE.Mesh(new THREE.SphereGeometry(0.052, 12, 10), inkFurn);
+  fs2.position.set(PX(p[0]), (FB+985)/1000, PZ(p[1])); fs2.userData.room='dapur'; fs2.userData.mat='cushion';
+  sweepMeshes.push(fs2); scene.add(fs2); });
+box(5210, 12280, 28, 520, 720, inkFurn, {base:1380, room:'km', mat:'mirror'});
+box(5210, 11680, 24, 340, 520, inkFurn, {base:980, room:'km', mat:'cushion'});
+box(1180, 9535, 520, 28, 720, inkFurn, {base:1380, room:'utama', mat:'mirror'});
 /* --- Teras --- */
 furn(4900, 4825, 900, 350, 420, {base:FB, room:'keluarga', mat:'wood2'});
 /* --- Car + yard (tetap gambar garis) --- */
@@ -493,7 +591,7 @@ sweepMeshes.forEach(function(m){
   mat.polygonOffset = true; mat.polygonOffsetFactor = -2; mat.polygonOffsetUnits = -2;
   var twin = new THREE.Mesh(m.geometry, mat);
   twin.position.copy(m.position); twin.rotation.copy(m.rotation);
-  twin.scale.setScalar(1.004);
+  twin.scale.copy(m.scale).multiplyScalar(1.004);
   twin.castShadow = true; twin.receiveShadow = true;
   scene.add(twin);
 });
@@ -662,7 +760,7 @@ var lastT = performance.now();
   if (Math.abs(targetP - currentP) < 0.0004) currentP = targetP;
   applyProgress(currentP);
   renderer.render(scene, camera);
-  if (firstFrame){ firstFrame = false; loader.style.opacity = '0'; setTimeout(function(){ loader.style.display='none'; }, 750); }
+  if (firstFrame){ firstFrame = false; frameReady = true; maybeHideLoader(); }
 })();
 })();
 </script>
