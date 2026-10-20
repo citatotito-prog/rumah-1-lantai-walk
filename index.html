@@ -652,10 +652,14 @@ window.addEventListener('resize', function(){
 });
 readScroll(); currentP = targetP;
 var firstFrame = true;
+var lastT = performance.now();
 (function loop(){
   requestAnimationFrame(loop);
-  currentP += (targetP - currentP) * 0.11;
-  if (Math.abs(targetP - currentP) < 0.00005) currentP = targetP;
+  var now = performance.now();
+  var dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  var k = 1 - Math.exp(-dt / 0.16);           // time-based damping: tracks scroll in ~1 s of wall time at ANY frame rate
+  currentP += (targetP - currentP) * k;
+  if (Math.abs(targetP - currentP) < 0.0004) currentP = targetP;
   applyProgress(currentP);
   renderer.render(scene, camera);
   if (firstFrame){ firstFrame = false; loader.style.opacity = '0'; setTimeout(function(){ loader.style.display='none'; }, 750); }
