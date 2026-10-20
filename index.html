@@ -205,7 +205,7 @@ var ROOMS = {
   k2:      {plane:new THREE.Plane(new THREE.Vector3(0,0,1),   2.00), from:2.00,  to:4.65, t0:0.525, t1:0.565},
   km:      {plane:new THREE.Plane(new THREE.Vector3(0,0,1),   2.00), from:2.00,  to:4.65, t0:0.595, t1:0.630},
   k3:      {plane:new THREE.Plane(new THREE.Vector3(0,0,1),   2.00), from:2.00,  to:4.65, t0:0.665, t1:0.705},
-  utama:   {plane:new THREE.Plane(new THREE.Vector3(1,0,0),   0.10), from:0.10,  to:4.15, t0:0.775, t1:0.825},
+  utama:   {plane:new THREE.Plane(new THREE.Vector3(1,0,0),   0.10), from:0.10,  to:4.15, t0:0.760, t1:0.810},
   tamu:    {plane:new THREE.Plane(new THREE.Vector3(1,0,0),   0.10), from:0.10,  to:4.15, t0:0.885, t1:0.925}
 };
 
@@ -430,8 +430,18 @@ furn(2450, 13150, 400, 400, 450, {base:FB, room:'k2', mat:'wood2'});
 /* --- KM utama --- */
 box(4025, 12975, 850, 850, 60, inkFurn, {base:FB, room:'km', mat:'white'});
 box(4025, 12975, 850, 850, 1900, glassInk, {base:FB+60, edges:false});
-furn(3700, 11925, 180, 450, 500, {base:FB, room:'km', mat:'white'});
-furn(4080, 11925, 460, 400, 380, {base:FB, room:'km', mat:'white'});
+furn(3700, 11925, 160, 480, 520, {base:FB+780, room:'km', mat:'white'});   // cistern
+(function(){ // WC bowl — shaped (pedestal + seat + bowl) so it reads as a toilet
+  var ped = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.09, 0.40, 18), inkFurn);
+  ped.position.set(PX(3980), FB/1000 + 0.20, PZ(11925)); ped.castShadow = true;
+  ped.userData.room='km'; ped.userData.mat='white'; sweepMeshes.push(ped); scene.add(ped);
+  var bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.13, 0.16, 18), inkFurn);
+  bowl.position.set(PX(3980), FB/1000 + 0.33, PZ(11925));
+  bowl.userData.room='km'; bowl.userData.mat='white'; sweepMeshes.push(bowl); scene.add(bowl);
+  var seat = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.055, 22), inkFurn);
+  seat.position.set(PX(3980), FB/1000 + 0.425, PZ(11925)); seat.castShadow = true;
+  seat.userData.room='km'; seat.userData.mat='white'; sweepMeshes.push(seat); scene.add(seat);
+})();
 furn(4985, 12280, 480, 560, 820, {base:FB, room:'km', mat:'white'});
 box(3620, 12300, 90, 2200, 1200, inkFurn, {base:FB, room:'km', mat:'tileWall'});   // wainscot W
 box(4400, 13450, 1650, 90, 1200, inkFurn, {base:FB, room:'km', mat:'tileWall'});   // wainscot N
@@ -532,22 +542,22 @@ var KEYS = [ // p, camera position, target, fov  (wide fov + pulled-back stops s
   {p:0.130, pos:[0,44,0.6],      tgt:[0,0,0],          fov:10},
   {p:0.240, pos:[0.45,1.7,6.4],  tgt:[0.45,1.35,2.9],  fov:60},
   {p:0.300, pos:[0.45,1.65,2.45],tgt:[2.6,1.0,0.9],    fov:66},
-  {p:0.360, pos:[0.7,1.7,2.55],  tgt:[3.35,0.95,0.4],  fov:74},
+  {p:0.360, pos:[1.05,1.65,0.35],tgt:[3.35,0.95,2.75], fov:74},
   {p:0.420, pos:[1.15,1.62,-0.1],tgt:[2.1,1.05,0.55],  fov:72},
   {p:0.480, pos:[1.55,1.65,-0.35],tgt:[3.9,0.95,-1.35],fov:74},
   {p:0.510, pos:[1.2,1.62,-0.25],tgt:[-1.5,1.05,-2.2], fov:70},
   {p:0.540, pos:[0.5,1.62,-1.45],tgt:[-3.1,0.98,-3.4], fov:72},
   {p:0.565, pos:[-1.45,1.62,-1.9],tgt:[-3.1,0.98,-3.6],fov:72},
-  {p:0.590, pos:[-1.35,1.65,-2.6],tgt:[-3.35,0.9,-3.9],fov:78},
-  {p:0.615, pos:[-1.1,1.62,-1.85],tgt:[-0.4,1.05,-4.0],fov:72},
+  {p:0.590, pos:[-1.15,1.6,-2.3], tgt:[-3.3,0.9,-3.7], fov:78},
+  {p:0.628, pos:[-1.1,1.62,-1.85],tgt:[-0.4,1.05,-4.0],fov:72},
   {p:0.640, pos:[0.45,1.6,-1.4], tgt:[-0.35,0.95,-3.3],fov:76},
   {p:0.670, pos:[1.95,1.62,-1.9],tgt:[3.15,0.98,-3.6], fov:72},
   {p:0.700, pos:[1.85,1.65,-2.5],tgt:[3.4,0.95,-4.1],  fov:74},
   {p:0.735, pos:[1.2,1.62,-0.25],tgt:[-0.5,1.05,-0.3], fov:70},
   {p:0.760, pos:[0.45,1.62,0.3], tgt:[-1.55,0.98,-0.9],fov:72},
-  {p:0.830, pos:[-0.3,1.68,0.35],tgt:[-2.5,0.9,-1.7], fov:74},
-  {p:0.860, pos:[-0.1,1.62,-0.15],tgt:[0.4,1.15,3.2],  fov:70},
-  {p:0.890, pos:[0.45,1.62,3.35],tgt:[-3.0,1.0,2.65],  fov:72},
+  {p:0.815, pos:[-0.35,1.66,0.5],tgt:[-2.3,0.92,-1.55],fov:74},
+  {p:0.875, pos:[-0.1,1.62,-0.15],tgt:[0.4,1.15,3.2],  fov:70},
+  {p:0.900, pos:[0.45,1.62,3.35],tgt:[-3.0,1.0,2.65],  fov:72},
   {p:0.925, pos:[-0.35,1.65,3.3],tgt:[-3.4,0.95,2.55], fov:74},
   {p:0.945, pos:[-0.3,1.62,3.25],tgt:[-3.4,0.95,2.55], fov:74},
   {p:0.972, pos:[0.45,7.5,6.2],  tgt:[-0.6,0,0.6],     fov:38},
@@ -575,7 +585,7 @@ var tmpV = new THREE.Vector3();
 var ROOM_STOPS = [
   [0.270, '01', 'RUANG KELUARGA'], [0.400, '02', 'DAPUR'], [0.520, '03', 'K. TIDUR 2'],
   [0.595, '04', 'K. MANDI'], [0.650, '05', 'K. TIDUR 3'], [0.755, '06', 'K. TIDUR UTAMA'],
-  [0.870, '07', 'R. TAMU'], [0.955, '00', 'DENAH · PENUTUP']
+  [0.885, '07', 'R. TAMU'], [0.955, '00', 'DENAH · PENUTUP']
 ];
 function applyProgress(p){
   var riseF = smooth(seg(p, 0.01, 0.13)) * (1 - smooth(seg(p, 0.945, 0.972)));
@@ -607,8 +617,8 @@ function applyProgress(p){
   caps[5].style.opacity = capOpacity(p, 0.52, 0.545, 0.585, 0.60);
   caps[6].style.opacity = capOpacity(p, 0.595, 0.615, 0.64, 0.655);
   caps[7].style.opacity = capOpacity(p, 0.65, 0.675, 0.72, 0.74);
-  caps[8].style.opacity = capOpacity(p, 0.755, 0.78, 0.845, 0.865);
-  caps[9].style.opacity = capOpacity(p, 0.87, 0.895, 0.912, 0.928);
+  caps[8].style.opacity = capOpacity(p, 0.755, 0.78, 0.862, 0.878);
+  caps[9].style.opacity = capOpacity(p, 0.885, 0.905, 0.912, 0.928);
   caps[10].style.opacity = capOpacity(p, 0.928, 0.94, 0.958, 0.97);
   caps[11].style.opacity = smooth(seg(p, 0.97, 0.988));
   var fin = smooth(seg(p, 0.962, 0.99));
